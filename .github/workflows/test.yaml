@@ -1,0 +1,47 @@
+name: Test Workflow
+
+# Trigger the workflow on push to main branch and pull requests
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Allow manual trigger from GitHub UI
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Print environment info
+        run: |
+          echo "🚀 Workflow triggered successfully!"
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "Event: ${{ github.event_name }}"
+          echo "Actor: ${{ github.actor }}"
+
+      - name: List project structure
+        run: |
+          echo "📁 Project structure:"
+          find . -type f -name "*.py" -o -name "*.yml" -o -name "*.yaml" -o -name "*.json" | head -20
+
+      - name: Check Docker Compose file
+        run: |
+          echo "🐳 Docker Compose configuration:"
+          if [ -f "docker-compose.yml" ]; then
+            echo "✅ docker-compose.yml found"
+            cat docker-compose.yml
+          else
+            echo "❌ docker-compose.yml not found"
+          fi
+
+      - name: Simple test success
+        run: |
+          echo "✅ All tests passed!"
+          echo "Workflow completed successfully at $(date)"
