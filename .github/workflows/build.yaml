@@ -1,0 +1,109 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag for images"
+        required: false
+        default: "latest"
+
+env:
+  PROJECT_ID: georgef-sandbox
+  REGISTRY_REGION: us-central1
+  REPOSITORY_NAME: keda-celery-flask-react
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up version tag
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+          else
+            VERSION="1.0.0-${GITHUB_SHA::8}"
+          fi
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "🏷️ Using version: ${VERSION}"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          echo "🔧 Configuring Docker for Artifact Registry..."
+          gcloud auth configure-docker ${{ env.REGISTRY_REGION }}-docker.pkg.dev
+
+      - name: Create Artifact Registry repository
+        run: |
+          echo "📦 Creating Artifact Registry repository..."
+          gcloud artifacts repositories create ${{ env.REPOSITORY_NAME }} \
+            --repository-format=docker \
+            --location=${{ env.REGISTRY_REGION }} || true
+          echo "✅ Repository ready"
+
+      - name: Set image tags
+        id: tags
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+          REGISTRY_BASE=${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY_NAME }}
+
+          API_IMG=${REGISTRY_BASE}/api:${VERSION}
+          WEB_IMG=${REGISTRY_BASE}/web:${VERSION}
+
+          echo "API_IMG=${API_IMG}" >> $GITHUB_OUTPUT
+          echo "WEB_IMG=${WEB_IMG}" >> $GITHUB_OUTPUT
+
+          echo "🐳 API Image: ${API_IMG}"
+          echo "🌐 Web Image: ${WEB_IMG}"
+
+      - name: Build and push API image
+        run: |
+          echo "🔨 Building API image..."
+          docker build -t ${{ steps.tags.outputs.API_IMG }} ./app/api
+          echo "📤 Pushing API image..."
+          docker push ${{ steps.tags.outputs.API_IMG }}
+          echo "✅ API image pushed successfully"
+
+      - name: Build and push Web image
+        run: |
+          echo "🔨 Building Web image..."
+          docker build -t ${{ steps.tags.outputs.WEB_IMG }} ./app/web
+          echo "📤 Pushing Web image..."
+          docker push ${{ steps.tags.outputs.WEB_IMG }}
+          echo "✅ Web image pushed successfully"
+
+      - name: Output image URIs
+        run: |
+          echo "🎉 Build completed successfully!"
+          echo ""
+          echo "📋 Published images:"
+          echo "  🔹 API: ${{ steps.tags.outputs.API_IMG }}"
+          echo "  🔹 Web: ${{ steps.tags.outputs.WEB_IMG }}"
+          echo ""
+          echo "🔗 Images are available in GCP Artifact Registry:"
+          echo "  https://console.cloud.google.com/artifacts/docker/${{ env.PROJECT_ID }}/${{ env.REGISTRY_REGION }}/${{ env.REPOSITORY_NAME }}"
