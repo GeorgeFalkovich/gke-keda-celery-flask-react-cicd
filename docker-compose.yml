@@ -1,0 +1,29 @@
+version: "3.9"
+services:
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]
+  api:
+    build: ./app/api
+    environment:
+      REDIS_HOST: redis
+    ports: ["8080:8080"]
+    depends_on: [redis]
+  worker:
+    build: ./app/api
+    command:
+      [
+        "celery",
+        "-A",
+        "celery_app.celery",
+        "worker",
+        "-Q",
+        "webhook",
+        "--loglevel=INFO",
+      ]
+    environment:
+      REDIS_HOST: redis
+    depends_on: [redis]
+  web:
+    build: ./app/web
+    ports: ["5173:80"]
