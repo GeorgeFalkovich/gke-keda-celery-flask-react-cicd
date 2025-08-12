@@ -4,7 +4,9 @@ export default function App() {
   const [payload, setPayload] = useState('{"msg":"hello"}');
   const [taskId, setTaskId] = useState("");
   const [status, setStatus] = useState(null);
-  const api = import.meta.env.VITE_API_URL || "http://localhost:8080";
+  // Use environment variable for API URL, default to /api if not set
+  // This allows the app to work in different environments (local, staging, production)
+  const api = import.meta.env.VITE_API_URL || "/api";
 
   const enqueue = async () => {
     const r = await fetch(`${api}/webhook`, {

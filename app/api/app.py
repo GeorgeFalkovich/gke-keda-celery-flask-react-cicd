@@ -1,9 +1,8 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
 from celery_app import celery, heavy_task
 
 app = Flask(__name__)
-CORS(app)  # Cors for all routes
+# Configure Flask-CORS if needed
 
 
 @app.route("/healthz")

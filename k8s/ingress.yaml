@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: keda-celery-ingress
+  annotations:
+    # GKE Ingress Controller
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: "keda-celery-ip"
+    # Enable Cloud Armor (optional)
+    cloud.google.com/armor-config: '{"default": "keda-security-policy"}'
+    # Backend configuration for CORS
+    cloud.google.com/backend-config: '{"ports": {"80":"web-backend-config", "8080":"api-backend-config"}}'
+spec:
+  rules:
+    - http:
+        paths:
+          # API routes (order matters - more specific paths first)
+          - path: /api/*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: api
+                port:
+                  number: 8080
+          # Frontend routes (catch-all)
+          - path: /*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: web
+                port:
+                  number: 80

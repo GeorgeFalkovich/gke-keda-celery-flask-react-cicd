@@ -1,0 +1,23 @@
+# keda-redis-scale.yaml
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: celery-worker-redis
+spec:
+  scaleTargetRef:
+    name: celery-worker
+  cooldownPeriod: 120
+  minReplicaCount: 0
+  maxReplicaCount: 20
+  pollingInterval: 5
+  triggers:
+    - type: redis
+      metadata:
+        address: "redis:6379"
+        listName: "webhook"
+        listLength: "100" # Adjust the list length as needed
+      #   password: "your_redis_password" # Optional, if your Redis instance requires a password
+      # authenticationRef:
+      #   name: redis-auth
+---
+
