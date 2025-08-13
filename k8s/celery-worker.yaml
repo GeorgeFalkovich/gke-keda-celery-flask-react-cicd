@@ -2,14 +2,14 @@ apiVersion: apps/v1
 kind: Deployment
 metadata: { name: celery-worker }
 spec:
-  replicas: 0 # starting from 0, will be scaled by KEDA
+  replicas: 2 # starting from 0, will be scaled by KEDA
   selector: { matchLabels: { app: celery-worker } }
   template:
     metadata: { labels: { app: celery-worker } }
     spec:
       containers:
         - name: worker
-          image: us-central1-docker.pkg.dev/georgef-sandbox/keda-celery-flask-react/api:1.0.0-dc62ee1b # same as API image (includes Celery)
+          image: us-central1-docker.pkg.dev/georgef-sandbox/keda-celery-flask-react/api:1.0.0-c097a5a0 # same as API image (includes Celery)
           command:
             [
               "celery",

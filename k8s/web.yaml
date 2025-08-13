@@ -1,16 +1,9 @@
 apiVersion: v1
 kind: Service
-metadata: 
-  name: web
-spec:
-  type: LoadBalancer
-  ports: [{ port: 80, targetPort: 80 }]
-  selector: { app: web }: v1
-kind: Service
 metadata:
   name: web
   annotations:
-    cloud.google.com/backend-config: '{"default": "web-backend-config"}'
+    # cloud.google.com/backend-config: '{"default": "web-backend-config"}'
 spec:
   type: NodePort
   ports: [{ port: 80, targetPort: 80, nodePort: 30081 }]
@@ -27,5 +20,5 @@ spec:
     spec:
       containers:
         - name: web
-          image: us-central1-docker.pkg.dev/georgef-sandbox/keda-celery-flask-react/web:1.0.0-dc62ee1b
+          image: us-central1-docker.pkg.dev/georgef-sandbox/keda-celery-flask-react/web:1.0.0-c097a5a0
           ports: [{ containerPort: 80 }]

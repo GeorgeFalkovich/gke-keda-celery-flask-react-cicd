@@ -29,6 +29,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch full history for change detection
+
+      - name: Detect changes
+        id: changes
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            api:
+              - 'app/api/**'
+            web:
+              - 'app/web/**'
 
       - name: Set up version tag
         id: version
@@ -43,22 +55,32 @@ jobs:
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
           echo "🏷️ Using version: ${VERSION}"
 
+      - name: Show detected changes
+        run: |
+          echo "🔍 Change detection results:"
+          echo "  API changed: ${{ steps.changes.outputs.api }}"
+          echo "  Web changed: ${{ steps.changes.outputs.web }}"
+
       - name: Authenticate to Google Cloud
+        if: steps.changes.outputs.api == 'true' || steps.changes.outputs.web == 'true'
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Set up Cloud SDK
+        if: steps.changes.outputs.api == 'true' || steps.changes.outputs.web == 'true'
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.PROJECT_ID }}
 
       - name: Configure Docker for Artifact Registry
+        if: steps.changes.outputs.api == 'true' || steps.changes.outputs.web == 'true'
         run: |
           echo "🔧 Configuring Docker for Artifact Registry..."
           gcloud auth configure-docker ${{ env.REGISTRY_REGION }}-docker.pkg.dev
 
       - name: Create Artifact Registry repository
+        if: steps.changes.outputs.api == 'true' || steps.changes.outputs.web == 'true'
         run: |
           echo "📦 Creating Artifact Registry repository..."
           gcloud artifacts repositories create ${{ env.REPOSITORY_NAME }} \
@@ -68,20 +90,25 @@ jobs:
 
       - name: Set image tags
         id: tags
+        if: steps.changes.outputs.api == 'true' || steps.changes.outputs.web == 'true'
         run: |
           VERSION=${{ steps.version.outputs.VERSION }}
           REGISTRY_BASE=${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY_NAME }}
 
-          API_IMG=${REGISTRY_BASE}/api:${VERSION}
-          WEB_IMG=${REGISTRY_BASE}/web:${VERSION}
+          if [[ "${{ steps.changes.outputs.api }}" == "true" ]]; then
+            API_IMG=${REGISTRY_BASE}/api:${VERSION}
+            echo "API_IMG=${API_IMG}" >> $GITHUB_OUTPUT
+            echo "🐳 API Image: ${API_IMG}"
+          fi
 
-          echo "API_IMG=${API_IMG}" >> $GITHUB_OUTPUT
-          echo "WEB_IMG=${WEB_IMG}" >> $GITHUB_OUTPUT
-
-          echo "🐳 API Image: ${API_IMG}"
-          echo "🌐 Web Image: ${WEB_IMG}"
+          if [[ "${{ steps.changes.outputs.web }}" == "true" ]]; then
+            WEB_IMG=${REGISTRY_BASE}/web:${VERSION}
+            echo "WEB_IMG=${WEB_IMG}" >> $GITHUB_OUTPUT
+            echo "🌐 Web Image: ${WEB_IMG}"
+          fi
 
       - name: Build and push API image
+        if: steps.changes.outputs.api == 'true'
         run: |
           echo "🔨 Building API image..."
           docker build -t ${{ steps.tags.outputs.API_IMG }} ./app/api
@@ -90,6 +117,7 @@ jobs:
           echo "✅ API image pushed successfully"
 
       - name: Build and push Web image
+        if: steps.changes.outputs.web == 'true'
         run: |
           echo "🔨 Building Web image..."
           docker build -t ${{ steps.tags.outputs.WEB_IMG }} ./app/web
@@ -98,12 +126,31 @@ jobs:
           echo "✅ Web image pushed successfully"
 
       - name: Output image URIs
+        if: steps.changes.outputs.api == 'true' || steps.changes.outputs.web == 'true'
         run: |
           echo "🎉 Build completed successfully!"
           echo ""
           echo "📋 Published images:"
-          echo "  🔹 API: ${{ steps.tags.outputs.API_IMG }}"
-          echo "  🔹 Web: ${{ steps.tags.outputs.WEB_IMG }}"
+
+          if [[ "${{ steps.changes.outputs.api }}" == "true" ]]; then
+            echo "  🔹 API: ${{ steps.tags.outputs.API_IMG }}"
+          else
+            echo "  ⏭️ API: No changes detected, skipped"
+          fi
+
+          if [[ "${{ steps.changes.outputs.web }}" == "true" ]]; then
+            echo "  🔹 Web: ${{ steps.tags.outputs.WEB_IMG }}"
+          else
+            echo "  ⏭️ Web: No changes detected, skipped"
+          fi
+
           echo ""
           echo "🔗 Images are available in GCP Artifact Registry:"
           echo "  https://console.cloud.google.com/artifacts/docker/${{ env.PROJECT_ID }}/${{ env.REGISTRY_REGION }}/${{ env.REPOSITORY_NAME }}"
+
+      - name: No changes detected
+        if: steps.changes.outputs.api == 'false' && steps.changes.outputs.web == 'false'
+        run: |
+          echo "ℹ️ No changes detected in app/api or app/web folders."
+          echo "🚀 Skipping Docker image builds."
+          echo "💡 This saves time and resources!"

@@ -3,6 +3,7 @@ apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
   name: celery-worker-redis
+  namespace: default
 spec:
   scaleTargetRef:
     name: celery-worker
@@ -13,7 +14,7 @@ spec:
   triggers:
     - type: redis
       metadata:
-        address: "redis:6379"
+        address: "redis.default.svc.cluster.local:6379"
         listName: "webhook"
         listLength: "100" # Adjust the list length as needed
       #   password: "your_redis_password" # Optional, if your Redis instance requires a password

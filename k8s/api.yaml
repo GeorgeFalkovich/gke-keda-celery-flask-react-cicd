@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: api
 spec:
-  type: ClusterIP
+  type: NodePort
   ports: [{ port: 8080, targetPort: 8080 }]
   selector: { app: api }
 ---
@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: us-central1-docker.pkg.dev/georgef-sandbox/keda-celery-flask-react/api:1.0.1
+          image: us-central1-docker.pkg.dev/georgef-sandbox/keda-celery-flask-react/api:1.0.0-c097a5a0
           env:
             - name: REDIS_HOST
               value: "redis"
