@@ -8,7 +8,7 @@ spec:
   scaleTargetRef:
     name: celery-worker
   cooldownPeriod: 120
-  minReplicaCount: 0
+  minReplicaCount: 1
   maxReplicaCount: 20
   pollingInterval: 5
   triggers:

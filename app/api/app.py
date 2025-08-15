@@ -10,7 +10,7 @@ def healthz():
     return "ok", 200
 
 
-@app.route("/webhook", methods=["POST"])
+@app.route("/api/webhook", methods=["POST"])
 def webhook():
     payload = request.json or {}
     # send task to "webhook"
@@ -18,7 +18,7 @@ def webhook():
     return jsonify({"task_id": t.id}), 202
 
 
-@app.route("/status/<task_id>")
+@app.route("/api/status/<task_id>")
 def status(task_id):
     res = celery.AsyncResult(task_id)
     return jsonify({

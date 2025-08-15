@@ -1,15 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
-metadata: { name: celery-worker }
+metadata:
+  name: celery-worker
 spec:
-  replicas: 2 # starting from 0, will be scaled by KEDA
-  selector: { matchLabels: { app: celery-worker } }
+  replicas: 1
+  selector:
+    matchLabels:
+      app: celery-worker
   template:
-    metadata: { labels: { app: celery-worker } }
+    metadata:
+      labels:
+        app: celery-worker
     spec:
       containers:
         - name: worker
-          image: us-central1-docker.pkg.dev/georgef-sandbox/keda-celery-flask-react/api:1.0.0-c097a5a0 # same as API image (includes Celery)
+          image: us-central1-docker.pkg.dev/georgef-sandbox/keda-celery-flask-react/api:1.0.0-c097a5a0 # Use the same image as the API for consistency
           command:
             [
               "celery",
@@ -24,5 +29,9 @@ spec:
             - name: REDIS_HOST
               value: "redis"
           resources:
-            requests: { cpu: "100m", memory: "128Mi" }
-            limits: { cpu: "1", memory: "512Mi" }
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "1"
+              memory: "512Mi"

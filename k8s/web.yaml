@@ -22,3 +22,15 @@ spec:
         - name: web
           image: us-central1-docker.pkg.dev/georgef-sandbox/keda-celery-flask-react/web:1.0.0-c097a5a0
           ports: [{ containerPort: 80 }]
+          volumeMounts:
+            - name: nginx-config-volume
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: nginx.conf
+              readOnly: true
+      volumes:
+        - name: nginx-config-volume
+          configMap:
+            name: nginx-config
+            items:
+              - key: nginx.conf
+                path: nginx.conf
